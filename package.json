@@ -1,0 +1,16 @@
+{
+  "name": "CSVParser",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js --sourceFile testBigCSV.csv --resultFile result.json --separator ;"
+  },
+  "keywords": [],
+  "author": "",
+  "type": "module",
+  "license": "ISC",
+  "dependencies": {
+    "yargs": "^17.3.1"
+  }
+}
