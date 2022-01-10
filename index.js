@@ -80,11 +80,9 @@ async function generateBigCSV(countIteration = 0) {
   writeStream.write(data);
 
   const dataForCopy = data.split('\r\n').slice(1).join('\r\n');
-  for await (let i of writeDataToBigCSV(writeStream, countIteration, dataForCopy));
-}
-
-async function* writeDataToBigCSV(writeStream, countIteration, data) {
   for (let i = 0; i < countIteration; i++) {
-    yield writeStream.write('\r\n' + data);
+    await new Promise((resolve) => {
+      writeStream.write('\r\n' + dataForCopy, resolve);
+    });
   }
 }
