@@ -1,6 +1,7 @@
 import fs from 'fs';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
+import { GoogleDriveService } from './GoogleDriveService.js';
 
 const argv = yargs(hideBin(process.argv))
   .usage(
@@ -81,9 +82,46 @@ readStream.on('data', (chunk) => {
 
 readStream.on('end', () => {
   writeStream.write(']');
+  loadJsonToGoogleDrive();
 });
 
-// generateBigCSV(3000);
+function loadJsonToGoogleDrive() {
+  const driveClientId = '584137776274-24m6p0k02kcv3mtotpc3tellsi98s040.apps.googleusercontent.com';
+  const driveClientSecret = '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';
+  const driveRedirectUri = 'https://developers.google.com/oauthplayground';
+  const driveRefreshToken =
+    '1//04hW158zUFjvOCgYIARAAGAQSNwF-L9Ir02C9q3cZZWHCuHh511P9savs-6EcqBcFL48J6MN5uT7uOxgnh2Oj2OJXwIU0wboT3qw';
+
+  (async () => {
+    const googleDriveService = new GoogleDriveService(
+      driveClientId,
+      driveClientSecret,
+      driveRedirectUri,
+      driveRefreshToken
+    );
+
+    const folderName = 'CSVParser';
+
+    let folder = await googleDriveService.searchFolder(folderName).catch((error) => {
+      console.error(error);
+      return null;
+    });
+
+    if (!folder) {
+      folder = await googleDriveService.createFolder(folderName);
+    }
+
+    await googleDriveService
+      .saveFile('CSVParser', resultFile, 'application/json', folder.id)
+      .catch((error) => {
+        console.error(error);
+      });
+
+    console.info('File uploaded successfully!');
+  })();
+}
+
+// generateBigCSV(1000);
 async function generateBigCSV(countIteration = 0) {
   const data = fs.readFileSync('testCSV.csv', {
     encoding: 'utf8',
