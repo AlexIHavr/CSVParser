@@ -2,13 +2,32 @@ import fs from 'fs';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 
-const argv = yargs(hideBin(process.argv)).argv;
+const argv = yargs(hideBin(process.argv))
+  .usage(
+    'Usage: node $0 --sourceFile [sourceFile] --resultFile [resultFile] --separator [separator]'
+  )
+  .options({
+    sourceFile: {
+      type: 'string',
+      description: 'Path of parsing file',
+      demandOption: true,
+    },
+    resultFile: {
+      type: 'string',
+      description: 'Path of result file',
+      demandOption: true,
+    },
+    separator: {
+      type: 'string',
+      default: ',',
+      description: 'Symbol for parsing csv',
+      demandOption: false,
+    },
+  }).argv;
 
 const sourceFile = argv.sourceFile;
 const resultFile = argv.resultFile;
 let separator = argv.separator;
-
-checkArgvErrors();
 
 const readStream = fs.createReadStream(sourceFile, {
   encoding: 'utf8',
@@ -22,7 +41,8 @@ let readedDataSize = 0;
 let hash = '';
 
 readStream.on('data', (chunk) => {
-  const chunkLines = (hash + chunk).split('\r\n');
+  const lineEnding = chunk.includes('\r\n') ? '\r\n' : '\r';
+  const chunkLines = (hash + chunk).split(lineEnding);
 
   hash = chunkLines.pop();
 
@@ -63,26 +83,21 @@ readStream.on('end', () => {
   writeStream.write(']');
 });
 
-function checkArgvErrors() {
-  if (typeof sourceFile !== 'string') throw new Error('Enter, please, sourceFile.');
-  if (typeof resultFile !== 'string') throw new Error('Enter, please, resultFile.');
-  if (separator === true) throw new Error('Invalid separator.');
-  if (!separator) separator = ',';
-}
-
-// generateBigCSV(10000);
+// generateBigCSV(3000);
 async function generateBigCSV(countIteration = 0) {
   const data = fs.readFileSync('testCSV.csv', {
     encoding: 'utf8',
   });
 
+  const lineEnding = data.includes('\r\n') ? '\r\n' : '\r';
+
   const writeStream = fs.createWriteStream('testBigCSV.csv');
   writeStream.write(data);
 
-  const dataForCopy = data.split('\r\n').slice(1).join('\r\n');
+  const dataForCopy = data.split(lineEnding).slice(1).join(lineEnding);
   for (let i = 0; i < countIteration; i++) {
     await new Promise((resolve) => {
-      writeStream.write('\r\n' + dataForCopy, resolve);
+      writeStream.write(lineEnding + dataForCopy, resolve);
     });
   }
 }
