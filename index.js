@@ -24,14 +24,13 @@ let hash = '';
 readStream.on('data', (chunk) => {
   const chunkLines = (hash + chunk).split('\r\n');
 
-  hash = chunkLines.splice(-1, 1)[0];
+  hash = chunkLines.pop();
 
-  if (!chunkLines.length) throw new Error('Invalid csv file.');
+  if (chunkLines.length === 1) throw new Error('Invalid csv file.');
 
   if (!keys.length) {
     keys = chunkLines[0].split(separator);
 
-    if (!keys.length) throw new Error('Invalid separator.');
     chunkLines.shift();
     writeStream.write('[');
   }
@@ -41,10 +40,8 @@ readStream.on('data', (chunk) => {
   chunkLines.forEach((line, iChunk) => {
     const splitedLine = line.split(separator);
 
-    console.log(keys, splitedLine);
-
     if (keys.length !== splitedLine.length) {
-      fs.unlinkSync(resultFile);
+      fs.rmSync(resultFile);
       throw new Error('Invalid csv file.');
     }
 
@@ -69,14 +66,12 @@ readStream.on('end', () => {
 function checkArgvErrors() {
   if (typeof sourceFile !== 'string') throw new Error('Enter, please, sourceFile.');
   if (typeof resultFile !== 'string') throw new Error('Enter, please, resultFile.');
-  if (!/^[0-9a-z.,_-]+\.[a-z]+$/i.test(resultFile) && resultFile.length <= 255)
-    throw new Error('Invalid resultFile name.');
   if (separator === true) throw new Error('Invalid separator.');
   if (!separator) separator = ',';
 }
 
-// generateBigCSV(2);
-function generateBigCSV(countIteration = 0) {
+// generateBigCSV(10000);
+async function generateBigCSV(countIteration = 0) {
   const data = fs.readFileSync('testCSV.csv', {
     encoding: 'utf8',
   });
@@ -85,7 +80,11 @@ function generateBigCSV(countIteration = 0) {
   writeStream.write(data);
 
   const dataForCopy = data.split('\r\n').slice(1).join('\r\n');
+  for await (let i of writeDataToBigCSV(writeStream, countIteration, dataForCopy));
+}
+
+async function* writeDataToBigCSV(writeStream, countIteration, data) {
   for (let i = 0; i < countIteration; i++) {
-    writeStream.write('\r\n' + dataForCopy);
+    yield writeStream.write('\r\n' + data);
   }
 }
