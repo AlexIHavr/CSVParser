@@ -45,12 +45,21 @@ export class GoogleDriveService {
     });
   }
 
-  saveFile(fileName, filePath, fileMimeType, folderId) {
+  async saveFile(fileName, filePath, fileMimeType) {
+    let folder = await this.searchFolder(fileName).catch((error) => {
+      console.error(error);
+      return null;
+    });
+
+    if (!folder) {
+      folder = await this.createFolder(fileName);
+    }
+
     return this.driveClient.files.create({
       requestBody: {
         name: fileName,
         mimeType: fileMimeType,
-        parents: folderId ? [folderId] : [],
+        parents: folder.id ? [folder.id] : [],
       },
       media: {
         mimeType: fileMimeType,

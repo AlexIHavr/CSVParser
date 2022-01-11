@@ -18,6 +18,7 @@
   "type": "module",
   "license": "ISC",
   "dependencies": {
+    "dotenv": "^11.0.0",
     "googleapis": "^92.0.0",
     "yargs": "^17.3.1"
   }
