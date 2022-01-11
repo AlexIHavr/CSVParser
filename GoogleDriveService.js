@@ -3,6 +3,11 @@ import { google } from 'googleapis';
 
 export class GoogleDriveService {
   constructor(clientId, clientSecret, redirectUri, refreshToken) {
+    if (!clientId) throw new Error('Enter, please, clientId');
+    if (!clientSecret) throw new Error('Enter, please, clientSecret');
+    if (!redirectUri) redirectUri = 'https://developers.google.com/oauthplayground';
+    if (!refreshToken) throw new Error('Enter, please, refreshToken');
+
     this.driveClient = this.createDriveClient(clientId, clientSecret, redirectUri, refreshToken);
   }
 
