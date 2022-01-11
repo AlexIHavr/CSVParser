@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
+import { CSVTransformStream } from './CSVTransformStream.js';
 import { GoogleDriveService } from './GoogleDriveService.js';
 
 dotenv.config();
@@ -38,64 +39,22 @@ const argv = yargs(hideBin(process.argv))
 
 const sourceFile = argv.sourceFile;
 const resultFile = argv.resultFile;
-let separator = argv.separator;
+const separator = argv.separator;
 
-const readStream = fs.createReadStream(sourceFile, {
+const csvReadStream = fs.createReadStream(sourceFile, {
   encoding: 'utf8',
 });
-const writeStream = fs.createWriteStream(resultFile);
+const csvWriteStream = fs.createWriteStream(resultFile);
+const csvTransformStream = new CSVTransformStream(sourceFile, separator);
 
-const sourceFileSize = fs.statSync(sourceFile).size;
+csvReadStream.pipe(csvTransformStream).pipe(csvWriteStream);
 
-let keys = [];
-let readedDataSize = 0;
-let hash = '';
-
-readStream.on('data', (chunk) => {
-  const lineEnding = chunk.includes('\r\n') ? '\r\n' : '\r';
-  const chunkLines = (hash + chunk).split(lineEnding);
-
-  hash = chunkLines.pop();
-
-  if (chunkLines.length === 1) throw new Error('Invalid csv file.');
-
-  if (!keys.length) {
-    keys = chunkLines[0].split(separator);
-
-    chunkLines.shift();
-    writeStream.write('[');
-  }
-
-  readedDataSize += chunk.length;
-
-  chunkLines.forEach((line, iChunk) => {
-    const splitedLine = line.split(separator);
-
-    if (keys.length !== splitedLine.length) {
-      fs.rmSync(resultFile);
-      throw new Error('Invalid csv file.');
-    }
-
-    const linesJson = splitedLine.reduce((lineJson, currentValue, i) => {
-      lineJson[keys[i]] = currentValue;
-      return lineJson;
-    }, {});
-
-    let coma = ',';
-    if (sourceFileSize === readedDataSize && iChunk === chunkLines.length - 1) {
-      coma = '';
-    }
-
-    writeStream.write(JSON.stringify(linesJson) + coma);
-  });
+csvReadStream.on('end', () => {
+  csvWriteStream.write(']');
+  csvWriteStream.end();
 });
 
-readStream.on('end', () => {
-  writeStream.write(']');
-  writeStream.end();
-});
-
-writeStream.on('finish', async () => {
+csvWriteStream.on('finish', async () => {
   await loadJsonToGoogleDrive();
 });
 
