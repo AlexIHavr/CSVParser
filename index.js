@@ -1,14 +1,44 @@
+import dotenv from 'dotenv';
 import fs from 'fs';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
+import { GoogleDriveService } from './GoogleDriveService.js';
 
-const argv = yargs(hideBin(process.argv)).argv;
+dotenv.config();
+
+const googleDriveService = new GoogleDriveService(
+  process.env.driveClientId,
+  process.env.driveClientSecret,
+  process.env.driveRedirectUri,
+  process.env.driveRefreshToken
+);
+
+const argv = yargs(hideBin(process.argv))
+  .usage(
+    'Usage: node $0 --sourceFile [sourceFile] --resultFile [resultFile] --separator [separator]'
+  )
+  .options({
+    sourceFile: {
+      type: 'string',
+      description: 'Path of parsing file',
+      demandOption: true,
+    },
+    resultFile: {
+      type: 'string',
+      description: 'Path of result file',
+      demandOption: true,
+    },
+    separator: {
+      type: 'string',
+      default: ',',
+      description: 'Symbol for parsing csv',
+      demandOption: false,
+    },
+  }).argv;
 
 const sourceFile = argv.sourceFile;
 const resultFile = argv.resultFile;
 let separator = argv.separator;
-
-checkArgvErrors();
 
 const readStream = fs.createReadStream(sourceFile, {
   encoding: 'utf8',
@@ -22,7 +52,8 @@ let readedDataSize = 0;
 let hash = '';
 
 readStream.on('data', (chunk) => {
-  const chunkLines = (hash + chunk).split('\r\n');
+  const lineEnding = chunk.includes('\r\n') ? '\r\n' : '\r';
+  const chunkLines = (hash + chunk).split(lineEnding);
 
   hash = chunkLines.pop();
 
@@ -61,30 +92,39 @@ readStream.on('data', (chunk) => {
 
 readStream.on('end', () => {
   writeStream.write(']');
+  writeStream.end();
 });
 
-function checkArgvErrors() {
-  if (typeof sourceFile !== 'string') throw new Error('Enter, please, sourceFile.');
-  if (typeof resultFile !== 'string') throw new Error('Enter, please, resultFile.');
-  if (separator === true) throw new Error('Invalid separator.');
-  if (!separator) separator = ',';
+writeStream.on('finish', async () => {
+  await loadJsonToGoogleDrive();
+});
+
+async function loadJsonToGoogleDrive() {
+  await googleDriveService
+    .saveFile('CSVParser', resultFile, 'application/json')
+    .then(() => {
+      console.info('File uploaded successfully!');
+    })
+    .catch((error) => {
+      console.error(error);
+    });
 }
 
-// generateBigCSV(10000);
+//generateBigCSV(2);
 async function generateBigCSV(countIteration = 0) {
   const data = fs.readFileSync('testCSV.csv', {
     encoding: 'utf8',
   });
 
+  const lineEnding = data.includes('\r\n') ? '\r\n' : '\r';
+
   const writeStream = fs.createWriteStream('testBigCSV.csv');
   writeStream.write(data);
 
-  const dataForCopy = data.split('\r\n').slice(1).join('\r\n');
-  for await (let i of writeDataToBigCSV(writeStream, countIteration, dataForCopy));
-}
-
-async function* writeDataToBigCSV(writeStream, countIteration, data) {
+  const dataForCopy = data.split(lineEnding).slice(1).join(lineEnding);
   for (let i = 0; i < countIteration; i++) {
-    yield writeStream.write('\r\n' + data);
+    await new Promise((resolve) => {
+      writeStream.write(lineEnding + dataForCopy, resolve);
+    });
   }
 }

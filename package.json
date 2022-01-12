@@ -4,13 +4,22 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js --sourceFile testBigCSV.csv --resultFile result.json --separator ;"
+    "start": "node index.js --sourceFile testBigCSV.csv --resultFile result.json",
+    "test1": "node index.js",
+    "test2": "node index.js --sourceFile testBigCSV.csv",
+    "test3": "node index.js --sourceFile --resultFile result.json",
+    "test4": "node index.js --sourceFile testBigCSV.csv --resultFile",
+    "test5": "node index.js --sourceFile testBigCSV.csv --resultFile result.json",
+    "test6": "node index.js --sourceFile testBigCSV.csv --resultFile result.json --separator .",
+    "test7": "node index.js --sourceFile testBigCSV.csv --resultFile result.json --separator"
   },
   "keywords": [],
   "author": "",
   "type": "module",
   "license": "ISC",
   "dependencies": {
+    "dotenv": "^11.0.0",
+    "googleapis": "^92.0.0",
     "yargs": "^17.3.1"
   }
 }

@@ -2,3 +2,4 @@ node_modules
 result.json
 testCSV.csv
 testBigCSV.csv
+.env
