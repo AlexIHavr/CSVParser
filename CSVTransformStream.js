@@ -2,13 +2,12 @@ import { Stream } from 'stream';
 import fs from 'fs';
 
 export class CSVTransformStream extends Stream.Transform {
-  constructor(sourceFile, separator) {
+  constructor(separator) {
     super();
 
     this.keys = [];
     this.readedDataSize = 0;
     this.hash = '';
-    this.sourceFileSize = fs.statSync(sourceFile).size;
     this.separator = separator;
   }
 
@@ -17,7 +16,7 @@ export class CSVTransformStream extends Stream.Transform {
     const lineEnding = chunk.includes('\r\n') ? '\r\n' : '\r';
     const chunkLines = (this.hash + chunk).split(lineEnding);
 
-    this.hash = chunkLines.pop();
+    let hash = chunkLines.pop();
 
     if (chunkLines.length === 1) throw new Error('Invalid csv file.');
 
@@ -34,7 +33,6 @@ export class CSVTransformStream extends Stream.Transform {
       const splitedLine = line.split(this.separator);
 
       if (this.keys.length !== splitedLine.length) {
-        fs.rmSync(resultFile);
         throw new Error('Invalid csv file.');
       }
 
@@ -44,12 +42,14 @@ export class CSVTransformStream extends Stream.Transform {
       }, {});
 
       let coma = ',';
-      if (this.sourceFileSize === this.readedDataSize && chunkIndex === chunkLines.length - 1) {
+      if (!this.hash && !chunkIndex) {
         coma = '';
       }
 
-      changedChunk += JSON.stringify(linesJson) + coma;
+      changedChunk += coma + JSON.stringify(linesJson);
     });
+
+    this.hash = hash;
 
     callback(null, changedChunk);
   }

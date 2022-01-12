@@ -45,7 +45,7 @@ const csvReadStream = fs.createReadStream(sourceFile, {
   encoding: 'utf8',
 });
 const csvWriteStream = fs.createWriteStream(resultFile);
-const csvTransformStream = new CSVTransformStream(sourceFile, separator);
+const csvTransformStream = new CSVTransformStream(separator);
 
 csvReadStream.pipe(csvTransformStream).pipe(csvWriteStream);
 
